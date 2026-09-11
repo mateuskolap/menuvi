@@ -137,15 +137,16 @@ O **Menuvi** é uma plataforma digital composta por:
 
 ### 1.5 Visão Geral do Documento
 
-Este documento está organizado da seguinte forma:
+Este documento é a especificação central e completa dos requisitos de software do sistema Menuvi, estruturado nas seguintes seções:
 
-- **Seção 2** descreve o produto de forma geral, seus usuários e restrições.
-- **Seção 3** apresenta a arquitetura de alto nível e a stack tecnológica.
-- **Seções 4 e 5** detalham os requisitos funcionais e não funcionais.
-- **Seção 6** especifica as regras de negócio.
-- **Seções 7 e 8** cobrem os requisitos de dados e interface.
-- **Seção 9** aborda a conformidade legal e regulatória.
-- **Seções 10 a 14** incluem rastreabilidade, critérios de aceitação, backlog, glossário e aprovações.
+- **Seção 2** descreve o produto de forma geral, seus atores, restrições e premissas.
+- **Seção 3** apresenta a arquitetura de alto nível e a stack tecnológica (PHP 8.5+, Laravel 13, PostgreSQL 18+, React Native, React 18+).
+- **Seção 4** detalha exaustivamente todos os 41 Requisitos Funcionais (RF-001 a RF-041), agrupados pelos 8 módulos do sistema.
+- **Seção 5** especifica todos os 36 Requisitos Não Funcionais (RNF-001 a RNF-036).
+- **Seção 6** consolida as 20 Regras de Negócio mandatórias (RN-01 a RN-20).
+- **Seções 7 e 8** cobrem o modelo conceitual de dados relacional em inglês e as interfaces de software/hardware.
+- **Seção 9** detalha a conformidade legal e regulatória (LGPD, CFN e regulação financeira).
+- **Seções 10 a 14** incluem a Matriz de Rastreabilidade, Critérios de Aceitação do MVP, Escopo Excluído, Glossário e Registro de Aprovações.
 
 ---
 
@@ -322,10 +323,10 @@ flowchart TD
 
 | Camada             | Tecnologia                          | Justificativa                                                           |
 |:-------------------|:------------------------------------|:------------------------------------------------------------------------|
-| **Backend**        | PHP 8.3+ com framework Laravel 11+  | Ecossistema maduro, produtividade alta, Eloquent ORM, filas nativas (Horizon), comunidade ativa no Brasil |
+| **Backend**        | PHP 8.5+ com framework Laravel 13   | Ecossistema de ponta, alta performance (JIT aprimorado), Eloquent ORM, filas nativas (Horizon), comunidade massiva no Brasil |
 | **Frontend Web**   | React 18+ (TypeScript)              | Ecossistema maduro, componentização, compatibilidade com React Native   |
 | **Mobile**         | React Native (TypeScript)           | Codebase unificado para iOS e Android, compartilhamento de tipos        |
-| **Banco de Dados** | PostgreSQL 16+                      | Robusto, suporte a JSON, extensões de busca textual, conformidade ACID  |
+| **Banco de Dados** | PostgreSQL 18+                      | Robusto, alta performance, recursos avançados de JSON, extensões de busca vetorial/textual e conformidade ACID estrita |
 | **Cache/Filas**    | Redis 7+ com Laravel Horizon         | Filas de processamento assíncrono (Horizon), cache de sessões, rate limiting |
 | **Object Storage** | MinIO ou S3-compatible (na VPS)      | Armazenamento de fotos de refeições com criptografia em repouso         |
 | **IA/LLM**         | Google Gemini API                   | Geração de rascunhos de cardápios com saída JSON estruturada             |
@@ -406,16 +407,17 @@ flowchart LR
 | **Pós-condição**| Conta criada e vinculada ao nutricionista emissor do convite.                                   |
 | **Regras**      | Apenas adultos (18+). Data de nascimento deve ser validada. Aceite de consentimento granular é obrigatório. |
 
-#### RF-003 — Validação Automática do CRN
+#### RF-003 — Validação Automática do CRN (API Pública CFN)
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-003                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Sistema                                                                                        |
-| **Descrição**   | O sistema deve consultar a API do Conselho Regional de Nutricionistas para verificar se o número de CRN informado pelo nutricionista é válido, ativo e se os dados pessoais conferem (nome completo e estado). |
-| **Fluxo Principal** | 1. Nutricionista conclui o cadastro (RF-001).<br/>2. Sistema envia requisição à API do CRN com os dados fornecidos.<br/>3. API retorna o status do registro.<br/>4. Se válido e dados conferem → conta é ativada.<br/>5. Se inválido ou dados divergem → conta permanece "Pendente" com notificação ao nutricionista. |
-| **Fluxo Alternativo** | Se a API do CRN estiver indisponível, o sistema deve enfileirar a verificação para retry automático (máx. 3 tentativas em 24h). Após esgotadas as tentativas, escalar para validação manual por um admin. |
-| **Critério de Aceitação** | Validação concluída em até 30 segundos. Em caso de falha da API, o retry deve ocorrer sem intervenção manual. |
+| **Descrição**   | O sistema deve consultar a API pública do Conselho Federal de Nutricionistas (CFN/CNN) para verificar se o registro informado pelo nutricionista é autêntico, se a situação cadastral está `ATIVO`, se o tipo é válido (`NUTRICIONISTA DEFINITIVO` ou equivalente) e se o nome completo confere com os dados cadastrados. |
+| **Especificação da API** | **Endpoint:** `POST https://cnn.cfn.org.br/application/front-resource/get`<br/>**Headers:** `Content-Type: application/json`<br/>**Corpo da Requisição (Payload):**<br/>```json<br/>{<br/>  "comando": "get-nutricionista",<br/>  "options": {<br/>    "crn": "{{n° da Região do CRN}}",<br/>    "registro": "{{número do registro}}",<br/>    "geral": true<br/>  }<br/>}<br/>```<br/>**Exemplo de Resposta de Sucesso:**<br/>```json<br/>{<br/>  "success": true,<br/>  "data": [<br/>    {<br/>      "nome": "PAULIANA MARIANO DE MOURA",<br/>      "registro": "15356",<br/>      "crn": 11,<br/>      "data_cadastro": "11-09-2026",<br/>      "situacao": "ATIVO",<br/>      "tipo_registro": "NUTRICIONISTA DEFINITIVO"<br/>    }<br/>  ]<br/>}<br/>``` |
+| **Fluxo Principal** | 1. Nutricionista conclui o formulário de cadastro (RF-001) informando o número do registro e a região do CRN (ex: 11).<br/>2. Backend (Laravel) despacha job assíncrono para envio da requisição POST ao endpoint do CFN.<br/>3. A API retorna `success: true` e lista com o cadastro correspondente.<br/>4. O sistema valida rigorosamente:<br/>   - Se `situacao == "ATIVO"`;<br/>   - Se `registro` e região de `crn` batem exatamente;<br/>   - Se o `nome` retornado possui alta similaridade com o nome civil informado (normalização de acentos e case insensitive).<br/>5. Atendidos os critérios → status é atualizado para `active`, registrando `crn_validated_at`. |
+| **Fluxo Alternativo** | (a) Se `success: false`, `data` vazio ou `situacao != "ATIVO"` → o cadastro permanece em status `rejected` ou `pending`, notificando o profissional com a inconsistência encontrada.<br/>(b) Se a API externa retornar erro 5xx ou timeout → job é enfileirado com retry exponencial (3 tentativas em 24h). Persistindo falha, escala para fila de validação manual no Backoffice (RF-041). |
+| **Critério de Aceitação** | Consulta automatizada e validação de consistência realizada em até 10 segundos. Normalização de nomes tolerante a pontuações e acentuação. |
 
 #### RF-004 — Login por E-mail e Senha
 | Campo           | Descrição                                                                                      |
@@ -512,10 +514,21 @@ flowchart LR
 | **ID**          | RF-013                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Nutricionista                                                                                  |
-| **Descrição**   | O sistema deve permitir que o nutricionista solicite à IA a geração de um rascunho de cardápio para um paciente específico. A IA deve considerar: (a) dados da anamnese do paciente (intolerâncias, aversões, alergias, objetivos), (b) metas calóricas e de macronutrientes definidas pelo nutricionista, (c) período do plano (1 a 30 dias, definido pelo nutricionista), (d) refeições do dia (configurável pelo nutricionista), (e) alimentos e composições obtidos das Tabelas TACO, TBCA e/ou USDA, respeitando a prioridade de preferência de tabelas configurada pelo nutricionista. |
-| **Fluxo Principal** | 1. Nutricionista seleciona o paciente.<br/>2. Define o período (ex: 7 dias) e as refeições (ex: café, almoço, lanche, jantar).<br/>3. Define metas calóricas/macros e ordem de preferência de tabelas nutricionais (ex: TACO > TBCA > USDA ou outra combinação).<br/>4. Clica em "Gerar Rascunho".<br/>5. Sistema envia prompt estruturado ao Google Gemini com os dados do paciente, ordem de prioridade de tabelas e catálogo de alimentos correspondente.<br/>6. Gemini retorna JSON estruturado com o cardápio.<br/>7. Sistema valida os dados retornados contra o banco nutricional unificado (cross-check de valores calóricos).<br/>8. Rascunho é apresentado no editor visual (RF-014). |
-| **Regras**      | A IA **nunca** inventa valores nutricionais. Toda composição deve ser verificável no banco nutricional (TACO, TBCA ou USDA). Se a IA retornar um alimento não encontrado em nenhuma das tabelas, o sistema deve sinalizar com warning visual. A prioridade de busca e consulta entre tabelas é definida ativamente pelo nutricionista (globalmente em seu perfil ou pontualmente na geração do plano; default: TACO > TBCA > USDA). Tempo máximo de geração: 10 segundos. Se exceder, exibir timeout com opção de retry. |
-| **Critério de Aceitação** | Rascunho gerado em até 10 segundos. 100% dos valores nutricionais rastreáveis às Tabelas TACO, TBCA ou USDA, obedecendo à ordem de prioridade escolhida pelo profissional. Nenhum alimento "inventado" pela IA sem correspondência no banco. Cada item deve indicar a tabela de origem do dado nutricional. |
+| **Descrição**   | O sistema deve permitir que o nutricionista solicite à IA a geração de um rascunho de cardápio para um paciente específico. O modelo de integração com o Google Gemini adota a arquitetura estrita **"AI as an Orchestrator / Database as the Source of Truth"**, onde a IA **nunca calcula nem retorna calorias ou macronutrientes**, limitando-se a combinar IDs de alimentos e sugerir gramaturas (`food_id` e `portion_grams`). Os valores nutricionais são calculados exclusivamente pelo backend (Laravel) via consulta determinística ao banco de dados relacional (`food_items`). |
+| **Especificação Técnica da IA (Gemini)** | **1. System Instruction (Instrução Rígida do Sistema):**<br/>`"Você é um copiloto assistente de prescrição alimentar para nutricionistas. Sua única função é montar a estrutura de cardápios combinando alimentos a partir de uma lista pré-definida de IDs válidos e sugerir a gramatura adequada para cada refeição. REGRAS OBRIGATÓRIAS: 1. Você JAMAIS deve calcular ou retornar calorias, macronutrientes, micronutrientes ou qualquer dado nutricional. 2. Você só pode utilizar alimentos da lista [ALIMENTOS_DISPONIVEIS] fornecida, usando o respectivo food_id. 3. Para cada item, forneça EXCLUSIVAMENTE food_id e portion_grams (gramas). 4. Respeite rigorosamente aversões, intolerâncias e objetivo do paciente. 5. REGRA DE DESEMPATE DE TABELAS: A lista de alimentos está ordenada rigorosamente de acordo com as preferências de tabela do nutricionista. Se um mesmo alimento (ou variação equivalente) aparecer mais de uma vez na lista, utilize OBRIGATORIAMENTE o PRIMEIRO ID que encontrar na ordenação. 6. Retorne única e exclusivamente a estrutura JSON solicitada."`<br/><br/>**2. Formato de Entrada (User Prompt Gerado pelo Laravel):**<br/>Contém objetivo clínico, período, lista de `meal_types` ativos selecionados, restrições e catálogo filtrado de alimentos permitidos (`id: Nome`) já pré-ordenado pela hierarquia de tabelas do profissional (`TACO > TBCA > USDA` ou personalizada), acompanhado do lembrete: *"Atenção: Em caso de duplicidade de alimentos, utilize sempre a primeira ocorrência da lista."*<br/><br/>**3. Esquema de Saída (JSON Estruturado):**<br/>```json<br/>{<br/>  "days": [<br/>    {<br/>      "day_number": 1,<br/>      "meals": [<br/>        {<br/>          "meal_type_id": "uuid-ou-codigo",<br/>          "items": [<br/>            { "food_id": 104, "portion_grams": 150 },<br/>            { "food_id": 12, "portion_grams": 120 }<br/>          ]<br/>        }<br/>      ]<br/>    }<br/>  ]<br/>}<br/>```<br/><br/>**4. Hidratação e Cálculo Determinístico no Backend:**<br/>O Laravel recebe os IDs, faz uma busca em lote (`WHERE id IN (...)` no PostgreSQL) e calcula a matemática exata com base na porção de 100g de cada tabela oficial: `kcal_calculada = (portion_grams * energy_kcal) / 100`. |
+| **Fluxo Principal** | 1. Nutricionista seleciona paciente, período (1 a 30 dias) e quais refeições (`meal_types`) participarão.<br/>2. Backend filtra catálogo de alimentos eliminando alergias/intolerâncias e ordenando pela preferência de tabelas do profissional (`TACO > TBCA > USDA`).<br/>3. Backend despacha chamada à API Gemini usando modo *Structured Outputs*.<br/>4. Gemini retorna o JSON contendo exclusivamente pares de `food_id` e `portion_grams`.<br/>5. Backend valida existência dos IDs, hidrata com a tabela `food_items` e executa cálculos de macros/micros.<br/>6. Rascunho completo e auditável é carregado no editor visual (RF-014) em tempo recorde. |
+| **Regras**      | A IA é terminantemente proibida de fornecer números nutricionais. Toda matemática calórica deve ser determinística no backend baseada nas tabelas oficiais. Se a IA retornar ID inválido, o backend descarta o item ou sinaliza alerta. Tempo máximo de resposta da IA: ≤ 10 segundos. |
+| **Critério de Aceitação** | 100% dos valores nutricionais exibidos no editor calculados pelo PostgreSQL/Laravel sem qualquer interferência matemática da LLM. Rastreabilidade total do alimento à sua tabela de origem. |
+
+#### RF-013-B — Gestão Dinâmica de Tipos de Refeição (Meal Types)
+| Campo           | Descrição                                                                                      |
+|:----------------|:-----------------------------------------------------------------------------------------------|
+| **ID**          | RF-013-B                                                                                       |
+| **Prioridade**  | MUST                                                                                           |
+| **Ator**        | Nutricionista, Admin Menuvi                                                                    |
+| **Descrição**   | O sistema deve gerenciar os tipos de refeição via entidade relacional (`meal_types`), permitindo: (a) Tipos globais padrão do sistema (Café da manhã, Almoço, Lanche da tarde, Jantar, Ceia, Pré-treino, Pós-treino), (b) Criação e personalização de novos tipos de refeição pelo nutricionista para sua prática clínica, (c) Definição de ordem de exibição, horário sugerido e ativação/desativação. |
+| **Regras**      | Nenhum tipo de refeição deve ser hardcoded no código da aplicação. Novos tipos adicionados via painel ou banco tornam-se imediatamente disponíveis no gerador de cardápios por IA, no editor e no app do paciente. |
+| **Critério de Aceitação** | CRUD completo de tipos de refeição. Associação dinâmica em cascata com planos e registros de fotos. |
 
 #### RF-014 — Editor Visual de Cardápio
 | Campo           | Descrição                                                                                      |
@@ -597,33 +610,44 @@ flowchart LR
 
 ### 4.5 Módulo Financeiro
 
-#### RF-022 — Configuração de Preços pelo Nutricionista
+#### RF-022 — Criação e Gestão de Planos de Atendimento (Billing Plans)
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-022                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Nutricionista                                                                                  |
-| **Descrição**   | O sistema deve permitir que o nutricionista defina os preços dos seus serviços para cada paciente individualmente, incluindo: (a) valor da consulta avulsa, (b) valor do acompanhamento mensal, (c) periodicidade de cobrança (mensal, quinzenal, por consulta). |
-| **Regras**      | O nutricionista tem total autonomia sobre seus preços. O Menuvi não tabela nem sugere valores. Preços podem ser alterados a qualquer momento (não retroativo a cobranças já emitidas). |
+| **Descrição**   | O sistema deve permitir que o nutricionista crie e personalize seu próprio catálogo de **Planos de Cobrança / Atendimento** (`billing_plans`), associados a tipos dinâmicos (`billing_plan_types`). Os planos podem incluir: (a) Consulta avulsa (pagamento único), (b) Assinatura recorrente mensal contínua, (c) Planos fechados parcelados/recorrentes por ciclo definido (ex: plano semestral de 6 parcelas, plano anual com 12 mensalidades consecutivas), (d) Título, descrição comercial, valor bruto da parcela/total e periodicidade. |
+| **Regras**      | O nutricionista vincula o paciente a um plano específico (`patient_subscriptions`). Toda transação gerada fica estritamente associada ao plano contratado e ao ciclo/parcela correspondente (ex: parcela 2 de 12). Novos tipos de faturamento podem ser cadastrados sem alteração no código-fonte. |
+| **Critério de Aceitação** | Criação de planos flexíveis com validação de periodicidade, parcelas e valor. Suporte a cobrança única e recorrente com histórico por contrato. |
 
-#### RF-023 — Cobrança Automática do Paciente
+#### RF-023 — Cobrança Automática Vinculada ao Plano Contratado
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-023                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Sistema                                                                                        |
-| **Descrição**   | O sistema deve gerar cobranças automáticas para os pacientes conforme a periodicidade e o valor definidos pelo nutricionista, utilizando a API do Asaas. Métodos de pagamento: (a) Cartão de crédito (recorrente), (b) PIX, (c) Boleto bancário. |
-| **Regras**      | Cobrança gerada automaticamente no vencimento. Notificação ao paciente sobre cobrança gerada (RF-033). Notificação ao nutricionista sobre pagamento confirmado ou em atraso (RF-033). |
+| **Descrição**   | O sistema deve gerar cobranças automáticas para os pacientes estritamente vinculadas ao plano de atendimento (`billing_plans`) e contrato de assinatura (`patient_subscriptions`) vigente. Suporte via API Asaas para: (a) Cartão de crédito (recorrência ou captura de parcelas), (b) PIX com QR code dinâmico por ciclo/parcela, (c) Boleto bancário com código de barras. |
+| **Regras**      | Cada transação armazena o ID da assinatura, o plano correspondente, o número da parcela corrente e o total de parcelas (ex: mensalidade 4 de 12). Cobrança gerada com antecedência programável antes do vencimento. Notificações automáticas em caso de emissão, confirmação e atraso. |
 
-#### RF-024 — Split de Pagamento Automático
+#### RF-024 — Split Financeiro (% sobre Transações do Paciente para Custeio de IA e Gateway)
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-024                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Sistema                                                                                        |
-| **Descrição**   | O sistema deve realizar o split de pagamento automaticamente via Asaas, retendo o percentual do Menuvi e repassando o valor líquido ao nutricionista. |
-| **Regras**      | Percentual de retenção do Menuvi será definido após validação de campo (entrevistas). O Menuvi **não faz custódia** de valores — o split é processado diretamente pelo Asaas. Repasse ao nutricionista conforme regras do Asaas (D+2, D+14, etc.). |
-| **Critério de Aceitação** | Split processado automaticamente em cada transação. Valores exatos e auditáveis. Sem intervenção manual. |
+| **Descrição**   | O sistema deve aplicar split automático via Asaas sobre cada pagamento realizado pelo paciente, retendo a comissão percentual do Menuvi destinada a cobrir os custos de infraestrutura de Inteligência Artificial (Google Gemini) e taxas transacionais do gateway, repassando o valor líquido diretamente para o nutricionista. |
+| **Regras**      | O Menuvi **não faz custódia** de valores — o split e a liquidação ocorrem diretamente no gateway Asaas. O percentual retido é parametrizado no banco de dados (`system_settings`) sem necessidade de deploy. |
+| **Critério de Aceitação** | Split processado automaticamente com precisão de centavos em cada transação. Valores líquidos creditados na subconta Asaas do profissional. |
+
+#### RF-024-B — Assinatura SaaS do Nutricionista e Política Progressiva de Bloqueio por Inadimplência
+| Campo           | Descrição                                                                                      |
+|:----------------|:-----------------------------------------------------------------------------------------------|
+| **ID**          | RF-024-B                                                                                       |
+| **Prioridade**  | MUST                                                                                           |
+| **Ator**        | Nutricionista, Sistema, Paciente                                                               |
+| **Descrição**   | O nutricionista deve assinar o plano SaaS Menuvi no valor fixo de **R$ 99,00/mês**, liquidado via Asaas (cartão, PIX ou boleto). Em caso de inadimplência de qualquer das partes, o sistema deve executar a **Política Progressiva de Bloqueio e Tolerância** parametrizada em banco de dados (`system_settings`):<br/><br/>**1. Ciclo de Bloqueio do Nutricionista (Inadimplência da Assinatura de R$ 99):**<br/>- **Dias 1 a 7 (Grace Period / Tolerância):** Status `grace_period`. Acesso 100% normal às ferramentas. Banners informativos e alertas discretos no painel notificando o vencimento pendente.<br/>- **Dia 8 a 30 (Soft Lock / Bloqueio Operacional):** Status `soft_lock`.<br/>  * **Recursos Bloqueados:** Desativação do botão de geração por IA (Gemini); desativação da aprovação e publicação de novos planos alimentares; desativação da emissão de novos links de convite para pacientes; suspensão temporária do processamento de visão computacional em novas fotos de refeições; retenção temporária de saques manuais de repasses de pacientes.<br/>  * **Garantias Éticas e Legais (Modo Somente Leitura):** O nutricionista **mantém acesso integral** para visualizar prontuários e históricos de anamneses de pacientes já atendidos, e realizar a exportação desses dados em PDF/CSV (cumprimento do Código de Ética do CFN e LGPD). Tela de quitação por PIX/Cartão é exibida com destaque para desbloqueio instantâneo.<br/>- **Dia 31 em diante (Hard Lock / Suspensão):** Status `suspended`. Painel com tela única de quitação de débitos e regularização cadastral.<br/>- **Dia 90 em diante (Congelamento):** Arquivamento da conta, mantendo os dados preservados em cold storage para auditoria legal obrigatória.<br/><br/>**2. Proteção e Experiência do Paciente durante a Inadimplência do Nutricionista:**<br/>- É **expressamente proibido** exibir mensagens vexatórias ou avisar ao paciente que o seu nutricionista está devendo o software.<br/>- Planos alimentares já aprovados e vigentes continuam acessíveis ao paciente.<br/>- Se o paciente solicitar renovação ou o plano vencer, o app exibe apenas: *"Seu nutricionista ainda não disponibilizou o novo plano alimentar. Entre em contato diretamente com ele."*<br/><br/>**3. Bloqueio do Paciente por Inadimplência com o Nutricionista:**<br/>- Se o paciente atrasar o pagamento de sua parcela/mensalidade por mais de 7 dias (`grace_period_days`), o app do paciente suspende o diário fotográfico e a visualização do plano até a baixa da fatura no Asaas. |
+| **Regras**      | Os prazos de tolerância (`saas_grace_period_days: 7`, `saas_soft_lock_days: 30`) são gerenciados dinamicamente via `system_settings`. Assim que o Asaas confirmar a quitação (webhook `PAYMENT_RECEIVED`), o sistema desbloqueia e restaura todos os acessos imediatamente (< 10 segundos). |
+| **Critério de Aceitação** | Ativação automática do `soft_lock` no D+8. Garantia de acesso de leitura a prontuários e exportação em qualquer estágio de bloqueio. Desbloqueio automatizado por webhook. Ausência total de mensagens constrangedoras para pacientes. |
 
 #### RF-025 — Extrato Financeiro do Nutricionista
 | Campo           | Descrição                                                                                      |
@@ -882,6 +906,10 @@ flowchart LR
 | RN-14 | Um paciente pode ser vinculado a múltiplos nutricionistas. Cada nutricionista acessa apenas seus próprios dados/planos | RF-012               |
 | RN-15 | Convites de paciente são de **uso único** e possuem prazo de expiração (padrão: 7 dias)                            | RF-008                  |
 | RN-16 | A validação do CRN deve ser re-verificada periodicamente (sugestão: a cada 90 dias) para garantir que o registro permanece ativo | RF-003          |
+| RN-17 | Os tipos de refeição (`meal_types`) são gerenciados dinamicamente via banco de dados, sendo vedada a fixação por enum ou código rígido, permitindo expansão global ou pelo nutricionista | RF-013, RF-013-B |
+| RN-18 | Toda transação financeira de paciente (`transactions`) deve estar vinculada a um plano financeiro (`billing_plans`) e à assinatura/contrato do paciente (`patient_subscriptions`), com rastreabilidade de ciclos ou parcelas contratadas | RF-022, RF-023, RF-024 |
+| RN-19 | O modelo de monetização do Menuvi é híbrido: mensalidade SaaS fixa do nutricionista (**R$ 99,00/mês**) somada a uma taxa percentual retida sobre os recebimentos de pacientes via split para custeio de IA e custos do gateway | RF-024, RF-024-B |
+| RN-20 | O sistema adota uma **Política Progressiva de Bloqueio por Inadimplência**: (a) **Tolerância (D+1 a D+7):** Acesso normal com avisos internos; (b) **Soft Lock (D+8 a D+30):** Bloqueio estrito de custos operacionais (IA Gemini, aprovação de novas dietas, novos convites e saques), mantendo garantida a visualização e exportação de prontuários em modo somente leitura (CFN/LGPD); (c) **Suspensão (D+31+):** Bloqueio de painel restrito à tela de quitação; (d) **Proteção ao Paciente:** Vedado constrangimento ou mensagens sobre a inadimplência do profissional aos seus pacientes. | RF-023, RF-024-B |
 
 ---
 
@@ -889,164 +917,328 @@ flowchart LR
 
 ### 7.1 Modelo de Dados Conceitual
 
+O modelo relacional do Menuvi adota uma arquitetura pragmática e equilibrada entre **configurabilidade de negócio** e **simplicidade arquitetural**:
+- **Tabelas dinâmicas configuráveis:** Aplicadas onde usuários criam dados e personalizações de negócio com frequência (ex: `meal_types` com refeições customizadas por nutricionista, `billing_plans` e `billing_plan_types` com pacotes/recorrências, `measurement_units`, convites, inscrições e configurações).
+- **Tipos fixos via Enum (Código/Migrations):** Aplicados a domínios técnicos que demandam código de parsing, algoritmos dedicados ou importações específicas — como as tabelas nutricionais de origem (`food_table_source: 'TACO' | 'TBCA' | 'USDA'`), armazenadas diretamente em `food_items`, e a preferência de prioridade do nutricionista serializada em JSON (`table_priority_order`).
+
 ```mermaid
 erDiagram
-    NUTRICIONISTA {
+    users {
         uuid id PK
-        string nome
+        string email UK
+        string password_hash
+        enum role "nutritionist | patient | admin"
+        string phone
+        string avatar_url
+        boolean is_active
+        timestamp email_verified_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    nutritionists {
+        uuid id PK
+        uuid user_id FK
+        string full_name
         string cpf UK
-        string email UK
-        string telefone
         string crn UK
-        string crn_estado
-        enum status "pendente | ativo | bloqueado"
-        timestamp crn_validado_em
-        timestamp criado_em
+        string crn_state
+        json table_priority_order "['TACO', 'TBCA', 'USDA']"
+        enum crn_status "pending | active | rejected | blocked"
+        timestamp crn_validated_at
+        string saas_subscription_id "asaas sub ID R$ 99"
+        enum saas_status "trial | active | grace_period | soft_lock | suspended | archived"
+        timestamp saas_paid_until
+        timestamp created_at
+        timestamp updated_at
     }
 
-    PACIENTE {
+    patients {
         uuid id PK
-        string nome
-        string email UK
-        string telefone
-        date data_nascimento
-        timestamp criado_em
+        uuid user_id FK
+        string full_name
+        date birth_date
+        string gender
+        timestamp created_at
+        timestamp updated_at
     }
 
-    ANAMNESE {
+    nutritionist_patient {
         uuid id PK
-        uuid paciente_id FK
-        uuid nutricionista_id FK
-        float peso_kg
-        float altura_cm
-        string objetivo_clinico
-        json intolerancias
-        json alergias
-        json aversoes
-        json preferencias
-        json condicoes_saude
-        string nivel_atividade
-        timestamp atualizado_em
+        uuid nutritionist_id FK
+        uuid patient_id FK
+        enum status "active | paused | terminated"
+        timestamp linked_at
+        timestamp created_at
+        timestamp updated_at
     }
 
-    PLANO_ALIMENTAR {
+    meal_types {
         uuid id PK
-        uuid paciente_id FK
-        uuid nutricionista_id FK
-        date data_inicio
-        date data_fim
-        enum status "rascunho | publicado | expirado"
-        float meta_kcal
-        json meta_macros
-        string hash_conteudo
-        timestamp aprovado_em
-        string aprovado_ip
-        timestamp criado_em
+        uuid nutritionist_id FK "nullable: global if null"
+        string code "breakfast | morning_snack | etc"
+        string name "Café da Manhã | Colação | etc"
+        string description
+        string suggested_time "08:00"
+        int default_order
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
     }
 
-    DIA_PLANO {
+    billing_plan_types {
         uuid id PK
-        uuid plano_id FK
-        int dia_numero
-        date data
-        string observacoes
+        string code "single_session | monthly_subscription | annual_installments | quarterly"
+        string name "Consulta Avulsa | Assinatura Mensal | Anual Parcelado"
+        boolean is_recurring
+        timestamp created_at
+        timestamp updated_at
     }
 
-    REFEICAO_PLANEJADA {
+    billing_plans {
         uuid id PK
-        uuid dia_plano_id FK
-        string tipo "cafe | lanche_manha | almoco | lanche_tarde | jantar | ceia"
-        int ordem
-        string observacoes
+        uuid nutritionist_id FK
+        uuid billing_plan_type_id FK
+        string title "Acompanhamento Premium 12x"
+        string description
+        float price_amount
+        string billing_interval "one_off | monthly | quarterly | yearly"
+        int billing_cycles "ex: 12 for 12 months, 1 for single"
+        int interval_count "ex: 1 every month"
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
     }
 
-    ITEM_REFEICAO {
+    patient_subscriptions {
         uuid id PK
-        uuid refeicao_planejada_id FK
-        uuid alimento_id FK
-        float gramatura
-        float kcal
-        float proteina_g
-        float carboidrato_g
-        float gordura_g
-        float fibra_g
-        string observacao
+        uuid patient_id FK
+        uuid nutritionist_id FK
+        uuid billing_plan_id FK
+        string asaas_subscription_id
+        enum status "pending | active | overdue | cancelled | expired"
+        date start_date
+        date next_billing_date
+        date expires_at
+        timestamp created_at
+        timestamp updated_at
     }
 
-    ALIMENTO_NUTRICIONAL {
-        int id PK
-        string nome
-        enum tabela_origem "TACO | TBCA | USDA"
-        string grupo
-        float energia_kcal
-        float proteina_g
-        float carboidrato_g
-        float lipideos_g
-        float fibra_g
-        json micronutrientes
-    }
-
-    REGISTRO_REFEICAO {
+    transactions {
         uuid id PK
-        uuid paciente_id FK
-        uuid refeicao_planejada_id FK
-        string foto_url
-        json alimentos_identificados
-        float confianca_ia
-        timestamp registrado_em
+        uuid patient_id FK
+        uuid nutritionist_id FK
+        uuid patient_subscription_id FK "nullable for single consult"
+        uuid billing_plan_id FK
+        string asaas_payment_id UK
+        float gross_amount
+        float menuvi_percentage
+        float menuvi_fee_amount
+        float nutritionist_net_amount
+        int installment_number "ex: 3 of 12"
+        int total_installments
+        enum status "pending | paid | overdue | refunded | cancelled"
+        string payment_method "pix | credit_card | boleto"
+        timestamp due_date
+        timestamp paid_at
+        timestamp created_at
+        timestamp updated_at
     }
 
-    TRANSACAO {
+    measurement_units {
         uuid id PK
-        uuid paciente_id FK
-        uuid nutricionista_id FK
-        string asaas_id
-        float valor_bruto
-        float percentual_menuvi
-        float valor_menuvi
-        float valor_liquido_nutri
-        enum status "pendente | pago | atrasado | cancelado"
-        string metodo_pagamento
-        timestamp vencimento
-        timestamp pago_em
+        string code "g | ml | spoon | slice | cup"
+        string name "Gramas | Mililitros | Colher de sopa"
+        string symbol "g | ml"
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
     }
 
-    CONVITE {
+    food_items {
         uuid id PK
-        uuid nutricionista_id FK
-        string email_paciente
-        string nome_paciente
+        enum table_source "TACO | TBCA | USDA"
+        string external_code "codigo na tabela original"
+        string name
+        string food_group "Cereais | Carnes | Frutas | etc"
+        float energy_kcal
+        float protein_grams
+        float carbs_grams
+        float lipids_grams
+        float fiber_grams
+        json micronutrients
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    anamneses {
+        uuid id PK
+        uuid patient_id FK
+        uuid nutritionist_id FK
+        float current_weight_kg
+        float height_cm
+        string clinical_goal
+        json intolerances
+        json allergies
+        json aversions
+        json preferences
+        json medical_conditions
+        string physical_activity_level
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    meal_plans {
+        uuid id PK
+        uuid patient_id FK
+        uuid nutritionist_id FK
+        uuid patient_subscription_id FK "nullable"
+        string title
+        date start_date
+        date end_date
+        enum status "draft | published | archived"
+        float calorie_target_kcal
+        json macro_targets
+        string content_hash
+        timestamp approved_at
+        string approved_ip
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    plan_days {
+        uuid id PK
+        uuid meal_plan_id FK
+        int day_number
+        date planned_date
+        string notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    planned_meals {
+        uuid id PK
+        uuid plan_day_id FK
+        uuid meal_type_id FK
+        time target_time
+        int display_order
+        string notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    meal_items {
+        uuid id PK
+        uuid planned_meal_id FK
+        uuid food_item_id FK
+        uuid measurement_unit_id FK
+        float portion_quantity
+        float portion_grams
+        float calories_kcal
+        float protein_grams
+        float carbs_grams
+        float fat_grams
+        float fiber_grams
+        string notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    meal_logs {
+        uuid id PK
+        uuid patient_id FK
+        uuid planned_meal_id FK
+        uuid meal_type_id FK
+        string photo_url
+        enum compliance_status "as_planned | substituted | exception"
+        json identified_foods
+        float ai_confidence_score
+        string patient_notes
+        timestamp logged_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    invitations {
+        uuid id PK
+        uuid nutritionist_id FK
+        uuid billing_plan_id FK "optional default plan"
+        string patient_email
+        string patient_name
         string token UK
-        enum status "pendente | aceito | expirado | cancelado"
-        timestamp expira_em
-        timestamp criado_em
+        enum status "pending | accepted | expired | cancelled"
+        timestamp expires_at
+        timestamp created_at
+        timestamp updated_at
     }
 
-    NOTIFICACAO {
+    system_settings {
         uuid id PK
-        uuid usuario_id FK
-        string tipo_usuario "nutricionista | paciente"
-        string titulo
-        string mensagem
-        string tipo_evento
-        json metadata
-        boolean lida
-        timestamp criado_em
+        string key UK "platform_fee_percent | default_language | etc"
+        json value
+        string description
+        timestamp created_at
+        timestamp updated_at
     }
 
-    NUTRICIONISTA ||--o{ CONVITE : "gera"
-    NUTRICIONISTA ||--o{ PLANO_ALIMENTAR : "cria e aprova"
-    NUTRICIONISTA ||--o{ ANAMNESE : "registra"
-    NUTRICIONISTA ||--o{ TRANSACAO : "recebe"
-    PACIENTE ||--o{ ANAMNESE : "possui"
-    PACIENTE ||--o{ PLANO_ALIMENTAR : "recebe"
-    PACIENTE ||--o{ REGISTRO_REFEICAO : "registra"
-    PACIENTE ||--o{ TRANSACAO : "paga"
-    PLANO_ALIMENTAR ||--|{ DIA_PLANO : "contém"
-    DIA_PLANO ||--|{ REFEICAO_PLANEJADA : "contém"
-    REFEICAO_PLANEJADA ||--|{ ITEM_REFEICAO : "contém"
-    ITEM_REFEICAO }o--|| ALIMENTO_NUTRICIONAL : "referencia"
-    REFEICAO_PLANEJADA ||--o{ REGISTRO_REFEICAO : "registra"
+    audit_logs {
+        uuid id PK
+        uuid user_id FK
+        string action "plan_approved | subscription_created | etc"
+        string auditable_type
+        uuid auditable_id
+        json old_values
+        json new_values
+        string ip_address
+        string user_agent
+        timestamp created_at
+    }
+
+    notifications {
+        uuid id PK
+        uuid user_id FK
+        string user_type "nutritionist | patient | admin"
+        string title
+        string message
+        string event_type
+        json metadata
+        boolean is_read
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    users ||--o| nutritionists : "profiles"
+    users ||--o| patients : "profiles"
+    users ||--o{ notifications : "receives"
+    users ||--o{ audit_logs : "triggers"
+    nutritionists ||--o{ nutritionist_patient : "manages"
+    patients ||--o{ nutritionist_patient : "assigned"
+    nutritionists ||--o{ billing_plans : "offers"
+    billing_plan_types ||--o{ billing_plans : "categorizes"
+    billing_plans ||--o{ patient_subscriptions : "subscribes"
+    patients ||--o{ patient_subscriptions : "holds"
+    patient_subscriptions ||--o{ transactions : "generates"
+    billing_plans ||--o{ transactions : "applies_to"
+    patients ||--o{ transactions : "pays"
+    nutritionists ||--o{ transactions : "receives"
+    nutritionists ||--o{ meal_types : "customizes"
+    nutritionists ||--o{ invitations : "issues"
+    billing_plans ||--o{ invitations : "attaches"
+    nutritionists ||--o{ anamneses : "conducts"
+    patients ||--o{ anamneses : "fills_or_provides"
+    anamneses ||--o{ meal_plans : "guides_baseline"
+    nutritionists ||--o{ meal_plans : "prescribes"
+    patients ||--o{ meal_plans : "receives"
+    patient_subscriptions ||--o{ meal_plans : "entitles"
+    meal_plans ||--|{ plan_days : "contains"
+    plan_days ||--|{ planned_meals : "contains"
+    meal_types ||--o{ planned_meals : "defines_type"
+    planned_meals ||--|{ meal_items : "contains"
+    food_items ||--o{ meal_items : "composed_of"
+    measurement_units ||--o{ meal_items : "quantifies"
+    planned_meals ||--o{ meal_logs : "tracks"
+    meal_types ||--o{ meal_logs : "records_type"
+    patients ||--o{ meal_logs : "submits"
 ```
 
 ### 7.2 Requisitos de Armazenamento
@@ -1118,7 +1310,7 @@ erDiagram
 | Google Gemini API   | REST / gRPC     | Geração de cardápios (texto) e identificação de alimentos (multimodal) |
 | Asaas API           | REST (HTTPS)    | Criação de cobranças, split de pagamentos, webhooks de status          |
 | EvolutionAPI        | REST (HTTPS)    | Envio de mensagens WhatsApp (notificações)                             |
-| API CRN             | REST (HTTPS)    | Validação de registro profissional                                     |
+| API CFN/CNN (CRN)   | POST (HTTPS)    | Consulta e validação de registro profissional (`https://cnn.cfn.org.br/application/front-resource/get`) |
 | FCM (Firebase)      | REST (HTTPS)    | Push notifications para iOS e Android                                  |
 | Serviço de E-mail   | SMTP / API REST | Envio de e-mails transacionais e notificações                          |
 | Apple Sign-In       | OAuth 2.0       | Autenticação social via Apple                                          |
@@ -1184,7 +1376,8 @@ A matriz abaixo cruza os requisitos funcionais com suas dependências, regras de
 | RF-010  | Pacientes             | —                 | RNF-012, RNF-024            | MUST       |
 | RF-011  | Pacientes             | —                 | RNF-002                     | MUST       |
 | RF-012  | Pacientes             | RN-14             | RNF-014                     | SHOULD     |
-| RF-013  | IA / Cardápios        | RN-03, RN-05, RN-06 | RNF-003, RNF-021          | MUST       |
+| RF-013  | IA / Cardápios        | RN-03, RN-05, RN-06, RN-17 | RNF-003, RNF-021    | MUST       |
+| RF-013-B| IA / Cardápios        | RN-17             | RNF-001, RNF-002            | MUST       |
 | RF-014  | IA / Cardápios        | RN-05             | RNF-002                     | MUST       |
 | RF-015  | IA / Cardápios        | RN-03, RN-04, RN-13 | RNF-012                   | MUST       |
 | RF-016  | IA / Cardápios        | RN-04, RN-07      | RNF-002                     | MUST       |
@@ -1193,9 +1386,10 @@ A matriz abaixo cruza os requisitos funcionais com suas dependências, regras de
 | RF-019  | Diário Alimentar      | RN-06             | RNF-004, RNF-021            | MUST       |
 | RF-020  | Diário Alimentar      | —                 | RNF-002                     | MUST       |
 | RF-021  | Diário Alimentar      | —                 | RNF-002                     | SHOULD     |
-| RF-022  | Financeiro            | RN-09             | RNF-001                     | MUST       |
-| RF-023  | Financeiro            | RN-08             | RNF-006                     | MUST       |
-| RF-024  | Financeiro            | RN-08             | RNF-006, RNF-012            | MUST       |
+| RF-022  | Financeiro            | RN-09, RN-18      | RNF-001                     | MUST       |
+| RF-023  | Financeiro            | RN-08, RN-18, RN-20 | RNF-006                   | MUST       |
+| RF-024  | Financeiro            | RN-08, RN-18, RN-19 | RNF-006, RNF-012          | MUST       |
+| RF-024-B| Financeiro            | RN-19, RN-20      | RNF-001, RNF-006            | MUST       |
 | RF-025  | Financeiro            | —                 | RNF-002                     | MUST       |
 | RF-026  | Financeiro            | —                 | RNF-002                     | MUST       |
 | RF-027  | Notificações          | —                 | RNF-001                     | MUST       |
@@ -1232,10 +1426,14 @@ Para que o MVP do Menuvi seja considerado **pronto para lançamento em piloto fe
 | 6  | Paciente visualiza o plano alimentar aprovado no app mobile                                            | Teste E2E             |
 | 7  | Paciente registra refeição com foto e a IA identifica alimentos                                        | Teste funcional       |
 | 8  | Nutricionista visualiza painel de adesão com fotos e % de adesão                                       | Teste E2E             |
-| 9  | Cobrança é gerada automaticamente e o split de pagamento é processado via Asaas                        | Teste integração      |
+| 9  | Cobrança é gerada automaticamente vinculada a um plano financeiro (`billing_plans`) e contrato ativo com split processado via Asaas | Teste integração |
 | 10 | Notificações são enviadas nos eventos corretos (push, in-app, e-mail, WhatsApp)                        | Teste integração      |
 | 11 | Dashboard do nutricionista exibe KPIs corretamente                                                     | Teste funcional       |
 | 12 | Backoffice permite CRUD de usuários e visualização de métricas                                          | Teste funcional       |
+| 13 | Tipos de refeição (`meal_types`) podem ser criados/customizados dinamicamente sem alteração de código  | Teste funcional       |
+| 14 | Planos financeiros customizados (avulsos, mensais, parcelados 12x) são criados e atribuídos a pacientes | Teste funcional       |
+| 15 | Nutricionista assina plano SaaS fixo de R$ 99,00/mês diretamente na plataforma via Asaas               | Teste integração      |
+| 16 | Trava de segurança por tolerância (7 dias configuráveis) bloqueia ferramentas de pacientes e nutricionistas inadimplentes | Teste E2E |
 
 ### 11.2 Critérios Não Funcionais
 
