@@ -3,9 +3,9 @@
 > **Documento:** Especificação de Requisitos de Software (SRS)  
 > **Padrão de referência:** IEEE 830-1998 / ISO/IEC/IEEE 29148:2018 (adaptado)  
 > **Produto:** Menuvi (`menuvi.com.br`)  
-> **Versão do Documento:** 1.0.0  
+> **Versão do Documento:** 1.0.3  
 > **Data de Criação:** 11/09/2026  
-> **Última Atualização:** 11/09/2026  
+> **Última Atualização:** 13/09/2026  
 > **Autor:** Mateus Serafim  
 > **Status:** Em Elaboração  
 
@@ -13,9 +13,9 @@
 
 ## Controle de Versões
 
-| Versão | Data       | Autor           | Descrição da Alteração                     |
-|:------:|:----------:|:----------------|:-------------------------------------------|
-| 1.0.0  | 11/09/2026 | Mateus Serafim  | Criação inicial do documento de requisitos |
+| Versão | Data       | Autor           | Descrição da Alteração                                                                 |
+|:------:|:----------:|:----------------|:---------------------------------------------------------------------------------------|
+| 1.0.0  | 11/09/2026 | Mateus Serafim  | Criação inicial do documento de requisitos                                             |
 
 ---
 
@@ -57,8 +57,7 @@
    7. [Internacionalização](#57-internacionalização)
 6. [Regras de Negócio](#6-regras-de-negócio)
 7. [Requisitos de Dados](#7-requisitos-de-dados)
-   1. [Modelo de Dados Conceitual](#71-modelo-de-dados-conceitual)
-   2. [Requisitos de Armazenamento](#72-requisitos-de-armazenamento)
+   1. [Requisitos de Armazenamento](#71-requisitos-de-armazenamento)
 8. [Requisitos de Interface](#8-requisitos-de-interface)
    1. [Interfaces de Usuário](#81-interfaces-de-usuário)
    2. [Interfaces de Software (APIs e Integrações)](#82-interfaces-de-software-apis-e-integrações)
@@ -144,7 +143,7 @@ Este documento é a especificação central e completa dos requisitos de softwar
 - **Seção 4** detalha exaustivamente todos os 41 Requisitos Funcionais (RF-001 a RF-041), agrupados pelos 8 módulos do sistema.
 - **Seção 5** especifica todos os 36 Requisitos Não Funcionais (RNF-001 a RNF-036).
 - **Seção 6** consolida as 20 Regras de Negócio mandatórias (RN-01 a RN-20).
-- **Seções 7 e 8** cobrem o modelo conceitual de dados relacional em inglês e as interfaces de software/hardware.
+- **Seções 7 e 8** cobrem os requisitos de armazenamento de dados e as interfaces de software/hardware.
 - **Seção 9** detalha a conformidade legal e regulatória (LGPD, CFN e regulação financeira).
 - **Seções 10 a 14** incluem a Matriz de Rastreabilidade, Critérios de Aceitação do MVP, Escopo Excluído, Glossário e Registro de Aprovações.
 
@@ -193,7 +192,7 @@ As funções principais do Menuvi, agrupadas por domínio:
 |:----:|:--------------------------------------------|:-----------------------------------------------------------------------------------------------------------|
 | F01  | Cadastro e Validação Profissional           | Registro do nutricionista com verificação ativa do CRN                                                     |
 | F02  | Autenticação Multi-método                   | Login via e-mail/senha e login social (Google/Apple)                                                       |
-| F03  | Gestão de Pacientes por Convite             | Convite individual de pacientes via link exclusivo, com onboarding e anamnese                               |
+| F03  | Gestão de Pacientes por Convite             | Convite individual de pacientes via link exclusivo, com onboarding e anamnese configurável (com template padrão do sistema) |
 | F04  | Geração de Cardápios Assistida por IA       | IA gera rascunhos de cardápios com base nas Tabelas TACO, TBCA e USDA, com período flexível (1–30 dias)    |
 | F05  | Editor de Cardápios                         | Editor visual para o nutricionista ajustar alimentos, quantidades e observações                             |
 | F06  | Aprovação e Publicação de Planos            | Trava de segurança: plano só chega ao paciente após aprovação formal do nutricionista                       |
@@ -403,7 +402,7 @@ flowchart LR
 | **Ator**        | Paciente                                                                                       |
 | **Descrição**   | O sistema deve permitir o cadastro de pacientes exclusivamente através de link de convite gerado por um nutricionista. O cadastro coleta: nome completo, e-mail, telefone, data de nascimento, senha. |
 | **Pré-condição**| Paciente possui link de convite válido e não expirado.                                          |
-| **Fluxo Principal** | 1. Paciente acessa o link de convite.<br/>2. Baixa o app (se necessário) ou é redirecionado.<br/>3. Preenche dados pessoais.<br/>4. Aceita Termos de Uso e Consentimento de Dados Sensíveis (LGPD Art. 11).<br/>5. Completa a anamnese simplificada (RF-010).<br/>6. Conta é vinculada ao nutricionista que gerou o convite. |
+| **Fluxo Principal** | 1. Paciente acessa o link de convite.<br/>2. Baixa o app (se necessário) ou é redirecionado.<br/>3. Preenche dados pessoais.<br/>4. Aceita Termos de Uso e Consentimento de Dados Sensíveis (LGPD Art. 11).<br/>5. Completa a anamnese configurada pelo nutricionista ou o template padrão do sistema (RF-010).<br/>6. Conta é vinculada ao nutricionista que gerou o convite. |
 | **Pós-condição**| Conta criada e vinculada ao nutricionista emissor do convite.                                   |
 | **Regras**      | Apenas adultos (18+). Data de nascimento deve ser validada. Aceite de consentimento granular é obrigatório. |
 
@@ -478,14 +477,15 @@ flowchart LR
 | **Descrição**   | O sistema deve exibir a lista de todos os pacientes vinculados ao nutricionista, com filtros por: status (ativo/inativo), nome, data de vínculo e status do plano alimentar vigente. |
 | **Critério de Aceitação** | Listagem carregada em menos de 2 segundos para até 200 pacientes. Busca por nome com resultado em tempo real (debounce de 300ms). |
 
-#### RF-010 — Anamnese Simplificada do Paciente
+#### RF-010 — Anamnese Configurável e Template Padrão do Sistema
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-010                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
-| **Ator**        | Paciente (com possibilidade de preenchimento pelo nutricionista)                               |
-| **Descrição**   | O sistema deve coletar informações clínicas e alimentares do paciente durante o onboarding: (a) Peso atual e altura, (b) Objetivo clínico (emagrecimento, hipertrofia, saúde geral, patologia específica), (c) Intolerâncias alimentares (glúten, lactose, frutos do mar, etc.), (d) Alergias alimentares, (e) Aversões alimentares (alimentos que não consome), (f) Preferências alimentares, (g) Condições de saúde relevantes (diabetes, hipertensão, etc.), (h) Nível de atividade física. |
-| **Regras**      | Anamnese editável a qualquer momento pelo nutricionista. Alterações na anamnese devem ser logadas (auditoria). Campos de intolerâncias e alergias são multi-seleção com opção de texto livre. |
+| **Ator**        | Nutricionista, Paciente                                                                        |
+| **Descrição**   | O sistema deve fornecer um módulo de anamnese dinâmico e flexível, permitindo personalização completa por nutricionista e disponibilizando um modelo padrão pronto para uso:<br/><br/>**1. Template Padrão do Sistema (Default):** O Menuvi disponibiliza um modelo de anamnese pré-configurado e validado, contendo os campos clínicos e nutricionais essenciais: (a) Peso atual e altura, (b) Objetivo clínico (emagrecimento, hipertrofia, manutenção, reeducação alimentar, saúde geral, etc.), (c) Intolerâncias alimentares (glúten, lactose, etc.), (d) Alergias alimentares (amendoim, frutos do mar, etc.), (e) Aversões alimentares (alimentos que não consome), (f) Preferências alimentares, (g) Condições de saúde / patologias diagnosticadas (diabetes, hipertensão, etc.), (h) Nível de atividade física e rotina de treinos, (i) Rotina e horários habituais das refeições.<br/><br/>**2. Construtor / Editor de Templates pelo Nutricionista:** O nutricionista pode utilizar o template padrão na íntegra ou criar formulários personalizados (do zero ou clonando o template padrão). O construtor permite: (a) Criar, renomear e reordenar seções e perguntas, (b) Selecionar múltiplos tipos de campo (texto curto, texto longo/parágrafo, número, seleção única/radio, múltipla escolha/checkbox, escala linear e data), (c) Definir campos como obrigatórios (*required*) ou opcionais, (d) Criar múltiplos modelos de anamnese para diferentes perfis de atendimento (ex: esportiva, emagrecimento, clínica), (e) Selecionar qual template será enviado no convite de cada paciente.<br/><br/>**3. Preenchimento Dinâmico no Onboarding (App Mobile):** O paciente responde à anamnese durante o onboarding no aplicativo móvel através de um formulário guiado gerado dinamicamente com base no template definido pelo seu nutricionista (ou o template padrão, caso o profissional não tenha customizado).<br/><br/>**4. Preenchimento e Edição pelo Nutricionista (Painel Web):** O nutricionista pode preencher a anamnese em nome do paciente durante a consulta presencial ou complementar/editar respostas enviadas pelo paciente.<br/><br/>**5. Mapeamento Estruturado para o Copiloto de IA (RF-013):** Os campos clínicos fundamentais para a geração de cardápios (objetivo clínico, alergias, intolerâncias e aversões alimentares) possuem mapeamento estruturado garantido no sistema para alimentar de forma determinística os parâmetros do motor de IA. |
+| **Regras**      | 1. Se o nutricionista não customizar ou não selecionar um template específico, o sistema adota automaticamente o **Template Padrão do Sistema**.<br/>2. As respostas do paciente são vinculadas à versão do template vigente no momento do envio, garantindo rastreabilidade histórica.<br/>3. Toda alteração posterior em anamneses já finalizadas deve ser registrada em log de auditoria (`audit_logs`) com data, autor e valores modificados.<br/>4. Campos de restrições (alergias/intolerâncias) preservam suporte a seleção em catálogo padronizado mais texto livre complementar. |
+| **Critério de Aceitação** | Nutricionista consegue criar ou customizar um formulário de anamnese em menos de 3 minutos no painel web. Se optar por não customizar, o Template Padrão é ativado com 1 clique ou por padrão. O app do paciente renderiza dinamicamente as perguntas cadastradas. Respostas ficam imediatamente visíveis no perfil do paciente e alimentam os parâmetros da IA (RF-013). |
 
 #### RF-011 — Perfil Detalhado do Paciente
 | Campo           | Descrição                                                                                      |
@@ -493,7 +493,7 @@ flowchart LR
 | **ID**          | RF-011                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Nutricionista                                                                                  |
-| **Descrição**   | O sistema deve exibir uma tela de perfil detalhado do paciente contendo: dados pessoais, anamnese completa, histórico de planos alimentares, timeline de adesão, histórico de evolução (peso, medidas) e status financeiro (pagamentos em dia/atrasados). |
+| **Descrição**   | O sistema deve exibir uma tela de perfil detalhado do paciente contendo: dados pessoais, anamnese completa (perguntas e respostas do template utilizado, com suporte a visualização e edição), histórico de planos alimentares, timeline de adesão, histórico de evolução (peso, medidas) e status financeiro (pagamentos em dia/atrasados). |
 
 #### RF-012 — Vinculação de Paciente a Múltiplos Nutricionistas
 | Campo           | Descrição                                                                                      |
@@ -639,15 +639,15 @@ flowchart LR
 | **Regras**      | O Menuvi **não faz custódia** de valores — o split e a liquidação ocorrem diretamente no gateway Asaas. O percentual retido é parametrizado no banco de dados (`system_settings`) sem necessidade de deploy. |
 | **Critério de Aceitação** | Split processado automaticamente com precisão de centavos em cada transação. Valores líquidos creditados na subconta Asaas do profissional. |
 
-#### RF-024-B — Assinatura SaaS do Nutricionista e Política Progressiva de Bloqueio por Inadimplência
+#### RF-024-B — Assinatura SaaS do Nutricionista, Planos Promocionais e Política Progressiva de Bloqueio por Inadimplência
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-024-B                                                                                       |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Nutricionista, Sistema, Paciente                                                               |
-| **Descrição**   | O nutricionista deve assinar o plano SaaS Menuvi no valor fixo de **R$ 99,00/mês**, liquidado via Asaas (cartão, PIX ou boleto). Em caso de inadimplência de qualquer das partes, o sistema deve executar a **Política Progressiva de Bloqueio e Tolerância** parametrizada em banco de dados (`system_settings`):<br/><br/>**1. Ciclo de Bloqueio do Nutricionista (Inadimplência da Assinatura de R$ 99):**<br/>- **Dias 1 a 7 (Grace Period / Tolerância):** Status `grace_period`. Acesso 100% normal às ferramentas. Banners informativos e alertas discretos no painel notificando o vencimento pendente.<br/>- **Dia 8 a 30 (Soft Lock / Bloqueio Operacional):** Status `soft_lock`.<br/>  * **Recursos Bloqueados:** Desativação do botão de geração por IA (Gemini); desativação da aprovação e publicação de novos planos alimentares; desativação da emissão de novos links de convite para pacientes; suspensão temporária do processamento de visão computacional em novas fotos de refeições; retenção temporária de saques manuais de repasses de pacientes.<br/>  * **Garantias Éticas e Legais (Modo Somente Leitura):** O nutricionista **mantém acesso integral** para visualizar prontuários e históricos de anamneses de pacientes já atendidos, e realizar a exportação desses dados em PDF/CSV (cumprimento do Código de Ética do CFN e LGPD). Tela de quitação por PIX/Cartão é exibida com destaque para desbloqueio instantâneo.<br/>- **Dia 31 em diante (Hard Lock / Suspensão):** Status `suspended`. Painel com tela única de quitação de débitos e regularização cadastral.<br/>- **Dia 90 em diante (Congelamento):** Arquivamento da conta, mantendo os dados preservados em cold storage para auditoria legal obrigatória.<br/><br/>**2. Proteção e Experiência do Paciente durante a Inadimplência do Nutricionista:**<br/>- É **expressamente proibido** exibir mensagens vexatórias ou avisar ao paciente que o seu nutricionista está devendo o software.<br/>- Planos alimentares já aprovados e vigentes continuam acessíveis ao paciente.<br/>- Se o paciente solicitar renovação ou o plano vencer, o app exibe apenas: *"Seu nutricionista ainda não disponibilizou o novo plano alimentar. Entre em contato diretamente com ele."*<br/><br/>**3. Bloqueio do Paciente por Inadimplência com o Nutricionista:**<br/>- Se o paciente atrasar o pagamento de sua parcela/mensalidade por mais de 7 dias (`grace_period_days`), o app do paciente suspende o diário fotográfico e a visualização do plano até a baixa da fatura no Asaas. |
-| **Regras**      | Os prazos de tolerância (`saas_grace_period_days: 7`, `saas_soft_lock_days: 30`) são gerenciados dinamicamente via `system_settings`. Assim que o Asaas confirmar a quitação (webhook `PAYMENT_RECEIVED`), o sistema desbloqueia e restaura todos os acessos imediatamente (< 10 segundos). |
-| **Critério de Aceitação** | Ativação automática do `soft_lock` no D+8. Garantia de acesso de leitura a prontuários e exportação em qualquer estágio de bloqueio. Desbloqueio automatizado por webhook. Ausência total de mensagens constrangedoras para pacientes. |
+| **Descrição**   | O nutricionista deve assinar um plano SaaS do Menuvi (plano padrão base de **R$ 99,00/mês** ou planos promocionais/customizados definidos pela administração), liquidado via Asaas (cartão de crédito recorrente, PIX ou boleto). O sistema deve fornecer suporte integral a:<br/><br/>**1. Planos Customizados e Preços Introdutórios por Ciclos (*Step Pricing / Promotional Cycles*):**<br/>- Capacidade de configurar planos com descontos progressivos ou decrescentes aplicados aos primeiros meses de adesão (ex: as 3 primeiras mensalidades por **R$ 49,90/mês**, retornando automaticamente ao valor regular de R$ 99,00/mês a partir do 4º ciclo), utilizando a funcionalidade de ciclos de desconto da API de assinaturas do Asaas (`discount.cycles`).<br/>- Suporte a periodicidade mensal ou anual com descontos proporcionais configuráveis.<br/><br/>**2. Cupons de Desconto e Campanhas de Aquisição:**<br/>- Suporte à aplicação de cupons promocionais informados no checkout da assinatura ou atribuídos automaticamente via links de campanhas de marketing ou parcerias institucionais.<br/>- Cupons podem conceder desconto em valor fixo (R$) ou percentual (%), com validade configurada por quantidade de ciclos (ex: 1 mês, 3 meses) ou por tempo indeterminado.<br/><br/>**3. Ciclo de Bloqueio do Nutricionista por Inadimplência:**<br/>- **Dias 1 a 7 (Grace Period / Tolerância):** Status `grace_period`. Acesso 100% normal às ferramentas. Banners informativos e alertas discretos no painel notificando o vencimento pendente.<br/>- **Dia 8 a 30 (Soft Lock / Bloqueio Operacional):** Status `soft_lock`.<br/>  * **Recursos Bloqueados:** Desativação do botão de geração por IA (Gemini); desativação da aprovação e publicação de novos planos alimentares; desativação da emissão de novos links de convite para pacientes; suspensão temporária do processamento de visão computacional em novas fotos de refeições; retenção temporária de saques manuais de repasses de pacientes.<br/>  * **Garantias Éticas e Legais (Modo Somente Leitura):** O nutricionista **mantém acesso integral** para visualizar prontuários e históricos de anamneses de pacientes já atendidos, e realizar a exportação desses dados em PDF/CSV (cumprimento do Código de Ética do CFN e LGPD). Tela de quitação por PIX/Cartão é exibida com destaque para desbloqueio instantâneo.<br/>- **Dia 31 em diante (Hard Lock / Suspensão):** Status `suspended`. Painel com tela única de quitação de débitos e regularização cadastral.<br/>- **Dia 90 em diante (Congelamento):** Arquivamento da conta, mantendo os dados preservados em cold storage para auditoria legal obrigatória.<br/><br/>**4. Proteção e Experiência do Paciente durante a Inadimplência do Nutricionista:**<br/>- É **expressamente proibido** exibir mensagens vexatórias ou avisar ao paciente que o seu nutricionista está devendo o software.<br/>- Planos alimentares já aprovados e vigentes continuam acessíveis ao paciente.<br/>- Se o paciente solicitar renovação ou o plano vencer, o app exibe apenas: *"Seu nutricionista ainda não disponibilizou o novo plano alimentar. Entre em contato diretamente com ele."*<br/><br/>**5. Bloqueio do Paciente por Inadimplência com o Nutricionista:**<br/>- Se o paciente atrasar o pagamento de sua parcela/mensalidade por mais de 7 dias (`grace_period_days`), o app do paciente suspende o diário fotográfico e a visualização do plano até a baixa da fatura no Asaas. |
+| **Regras**      | Os planos SaaS disponíveis, regras de ciclos promocionais e prazos de tolerância (`saas_grace_period_days: 7`, `saas_soft_lock_days: 30`) são gerenciados dinamicamente via banco de dados (`system_settings`) e administrados no Backoffice (RF-040). Assim que o Asaas confirmar a quitação (webhook `PAYMENT_RECEIVED`), o sistema desbloqueia e restaura todos os acessos imediatamente (< 10 segundos). |
+| **Critério de Aceitação** | Criação bem-sucedida de assinaturas no Asaas com preço promocional por ciclos (ex: 3x R$ 49,90 e depois R$ 99,00). Aplicação e validação de cupons promocionais no checkout. Ativação automática do `soft_lock` no D+8. Garantia de acesso de leitura a prontuários e exportação em qualquer estágio de bloqueio. Desbloqueio automatizado por webhook. |
 
 #### RF-025 — Extrato Financeiro do Nutricionista
 | Campo           | Descrição                                                                                      |
@@ -789,13 +789,13 @@ flowchart LR
 | **Ator**        | Admin Menuvi                                                                                   |
 | **Descrição**   | O sistema deve exibir métricas agregadas da plataforma: (a) total de nutricionistas cadastrados (ativos/inativos), (b) total de pacientes cadastrados (ativos/inativos), (c) total de planos gerados/aprovados, (d) volume financeiro total transacionado, (e) receita do Menuvi (total de comissões retidas), (f) taxa de churn (nutricionistas que deixaram a plataforma). |
 
-#### RF-040 — Painel Administrativo — Financeiro
+#### RF-040 — Painel Administrativo — Gestão de Planos SaaS, Cupons e Financeiro
 | Campo           | Descrição                                                                                      |
 |:----------------|:-----------------------------------------------------------------------------------------------|
 | **ID**          | RF-040                                                                                         |
 | **Prioridade**  | MUST                                                                                           |
 | **Ator**        | Admin Menuvi                                                                                   |
-| **Descrição**   | O sistema deve exibir o painel financeiro consolidado do Menuvi: (a) receita total (comissões), (b) volume total de transações, (c) detalhamento por nutricionista, (d) transações pendentes / em disputa, (e) reconciliação com Asaas. |
+| **Descrição**   | O sistema deve fornecer no painel administrativo as ferramentas financeiras, comerciais e de monetização da plataforma: (a) **Gestão de Planos SaaS e Step Pricing:** criação, edição e inativação de planos de assinatura para nutricionistas, com parametrização de valor base, periodicidade e descontos por ciclo inicial (ex: 3 primeiros meses por R$ 49,90 e valor integral de R$ 99,00 a partir do 4º mês); (b) **Gestão de Cupons Promocionais:** emissão e controle de cupons com desconto fixo ou percentual, regras de validade por quantidade de ciclos ou data limite e restrições de uso; (c) **Painel Financeiro Consolidado:** receita total por assinaturas SaaS (MRR) e comissões de split, volume transacionado de pacientes, detalhamento por nutricionista, faturas pendentes/inadimplentes e reconciliação com a API do Asaas. |
 
 #### RF-041 — Validação Manual de CRN (Fallback)
 | Campo           | Descrição                                                                                      |
@@ -908,340 +908,14 @@ flowchart LR
 | RN-16 | A validação do CRN deve ser re-verificada periodicamente (sugestão: a cada 90 dias) para garantir que o registro permanece ativo | RF-003          |
 | RN-17 | Os tipos de refeição (`meal_types`) são gerenciados dinamicamente via banco de dados, sendo vedada a fixação por enum ou código rígido, permitindo expansão global ou pelo nutricionista | RF-013, RF-013-B |
 | RN-18 | Toda transação financeira de paciente (`transactions`) deve estar vinculada a um plano financeiro (`billing_plans`) e à assinatura/contrato do paciente (`patient_subscriptions`), com rastreabilidade de ciclos ou parcelas contratadas | RF-022, RF-023, RF-024 |
-| RN-19 | O modelo de monetização do Menuvi é híbrido: mensalidade SaaS fixa do nutricionista (**R$ 99,00/mês**) somada a uma taxa percentual retida sobre os recebimentos de pacientes via split para custeio de IA e custos do gateway | RF-024, RF-024-B |
+| RN-19 | O modelo de monetização do Menuvi é híbrido: assinatura SaaS do nutricionista (plano base de **R$ 99,00/mês**, com suporte a planos promocionais, descontos por ciclos iniciais e cupons gerenciados pelo Menuvi) somada a uma taxa percentual retida sobre os recebimentos de pacientes via split para custeio de IA e custos do gateway | RF-024, RF-024-B, RF-040 |
 | RN-20 | O sistema adota uma **Política Progressiva de Bloqueio por Inadimplência**: (a) **Tolerância (D+1 a D+7):** Acesso normal com avisos internos; (b) **Soft Lock (D+8 a D+30):** Bloqueio estrito de custos operacionais (IA Gemini, aprovação de novas dietas, novos convites e saques), mantendo garantida a visualização e exportação de prontuários em modo somente leitura (CFN/LGPD); (c) **Suspensão (D+31+):** Bloqueio de painel restrito à tela de quitação; (d) **Proteção ao Paciente:** Vedado constrangimento ou mensagens sobre a inadimplência do profissional aos seus pacientes. | RF-023, RF-024-B |
 
 ---
 
 ## 7. Requisitos de Dados
 
-### 7.1 Modelo de Dados Conceitual
-
-O modelo relacional do Menuvi adota uma arquitetura pragmática e equilibrada entre **configurabilidade de negócio** e **simplicidade arquitetural**:
-- **Tabelas dinâmicas configuráveis:** Aplicadas onde usuários criam dados e personalizações de negócio com frequência (ex: `meal_types` com refeições customizadas por nutricionista, `billing_plans` e `billing_plan_types` com pacotes/recorrências, `measurement_units`, convites, inscrições e configurações).
-- **Tipos fixos via Enum (Código/Migrations):** Aplicados a domínios técnicos que demandam código de parsing, algoritmos dedicados ou importações específicas — como as tabelas nutricionais de origem (`food_table_source: 'TACO' | 'TBCA' | 'USDA'`), armazenadas diretamente em `food_items`, e a preferência de prioridade do nutricionista serializada em JSON (`table_priority_order`).
-
-```mermaid
-erDiagram
-    users {
-        uuid id PK
-        string email UK
-        string password_hash
-        enum role "nutritionist | patient | admin"
-        string phone
-        string avatar_url
-        boolean is_active
-        timestamp email_verified_at
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    nutritionists {
-        uuid id PK
-        uuid user_id FK
-        string full_name
-        string cpf UK
-        string crn UK
-        string crn_state
-        json table_priority_order "['TACO', 'TBCA', 'USDA']"
-        enum crn_status "pending | active | rejected | blocked"
-        timestamp crn_validated_at
-        string saas_subscription_id "asaas sub ID R$ 99"
-        enum saas_status "trial | active | grace_period | soft_lock | suspended | archived"
-        timestamp saas_paid_until
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    patients {
-        uuid id PK
-        uuid user_id FK
-        string full_name
-        date birth_date
-        string gender
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    nutritionist_patient {
-        uuid id PK
-        uuid nutritionist_id FK
-        uuid patient_id FK
-        enum status "active | paused | terminated"
-        timestamp linked_at
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    meal_types {
-        uuid id PK
-        uuid nutritionist_id FK "nullable: global if null"
-        string code "breakfast | morning_snack | etc"
-        string name "Café da Manhã | Colação | etc"
-        string description
-        string suggested_time "08:00"
-        int default_order
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    billing_plan_types {
-        uuid id PK
-        string code "single_session | monthly_subscription | annual_installments | quarterly"
-        string name "Consulta Avulsa | Assinatura Mensal | Anual Parcelado"
-        boolean is_recurring
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    billing_plans {
-        uuid id PK
-        uuid nutritionist_id FK
-        uuid billing_plan_type_id FK
-        string title "Acompanhamento Premium 12x"
-        string description
-        float price_amount
-        string billing_interval "one_off | monthly | quarterly | yearly"
-        int billing_cycles "ex: 12 for 12 months, 1 for single"
-        int interval_count "ex: 1 every month"
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    patient_subscriptions {
-        uuid id PK
-        uuid patient_id FK
-        uuid nutritionist_id FK
-        uuid billing_plan_id FK
-        string asaas_subscription_id
-        enum status "pending | active | overdue | cancelled | expired"
-        date start_date
-        date next_billing_date
-        date expires_at
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    transactions {
-        uuid id PK
-        uuid patient_id FK
-        uuid nutritionist_id FK
-        uuid patient_subscription_id FK "nullable for single consult"
-        uuid billing_plan_id FK
-        string asaas_payment_id UK
-        float gross_amount
-        float menuvi_percentage
-        float menuvi_fee_amount
-        float nutritionist_net_amount
-        int installment_number "ex: 3 of 12"
-        int total_installments
-        enum status "pending | paid | overdue | refunded | cancelled"
-        string payment_method "pix | credit_card | boleto"
-        timestamp due_date
-        timestamp paid_at
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    measurement_units {
-        uuid id PK
-        string code "g | ml | spoon | slice | cup"
-        string name "Gramas | Mililitros | Colher de sopa"
-        string symbol "g | ml"
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    food_items {
-        uuid id PK
-        enum table_source "TACO | TBCA | USDA"
-        string external_code "codigo na tabela original"
-        string name
-        string food_group "Cereais | Carnes | Frutas | etc"
-        float energy_kcal
-        float protein_grams
-        float carbs_grams
-        float lipids_grams
-        float fiber_grams
-        json micronutrients
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    anamneses {
-        uuid id PK
-        uuid patient_id FK
-        uuid nutritionist_id FK
-        float current_weight_kg
-        float height_cm
-        string clinical_goal
-        json intolerances
-        json allergies
-        json aversions
-        json preferences
-        json medical_conditions
-        string physical_activity_level
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    meal_plans {
-        uuid id PK
-        uuid patient_id FK
-        uuid nutritionist_id FK
-        uuid patient_subscription_id FK "nullable"
-        string title
-        date start_date
-        date end_date
-        enum status "draft | published | archived"
-        float calorie_target_kcal
-        json macro_targets
-        string content_hash
-        timestamp approved_at
-        string approved_ip
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    plan_days {
-        uuid id PK
-        uuid meal_plan_id FK
-        int day_number
-        date planned_date
-        string notes
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    planned_meals {
-        uuid id PK
-        uuid plan_day_id FK
-        uuid meal_type_id FK
-        time target_time
-        int display_order
-        string notes
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    meal_items {
-        uuid id PK
-        uuid planned_meal_id FK
-        uuid food_item_id FK
-        uuid measurement_unit_id FK
-        float portion_quantity
-        float portion_grams
-        float calories_kcal
-        float protein_grams
-        float carbs_grams
-        float fat_grams
-        float fiber_grams
-        string notes
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    meal_logs {
-        uuid id PK
-        uuid patient_id FK
-        uuid planned_meal_id FK
-        uuid meal_type_id FK
-        string photo_url
-        enum compliance_status "as_planned | substituted | exception"
-        json identified_foods
-        float ai_confidence_score
-        string patient_notes
-        timestamp logged_at
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    invitations {
-        uuid id PK
-        uuid nutritionist_id FK
-        uuid billing_plan_id FK "optional default plan"
-        string patient_email
-        string patient_name
-        string token UK
-        enum status "pending | accepted | expired | cancelled"
-        timestamp expires_at
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    system_settings {
-        uuid id PK
-        string key UK "platform_fee_percent | default_language | etc"
-        json value
-        string description
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    audit_logs {
-        uuid id PK
-        uuid user_id FK
-        string action "plan_approved | subscription_created | etc"
-        string auditable_type
-        uuid auditable_id
-        json old_values
-        json new_values
-        string ip_address
-        string user_agent
-        timestamp created_at
-    }
-
-    notifications {
-        uuid id PK
-        uuid user_id FK
-        string user_type "nutritionist | patient | admin"
-        string title
-        string message
-        string event_type
-        json metadata
-        boolean is_read
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    users ||--o| nutritionists : "profiles"
-    users ||--o| patients : "profiles"
-    users ||--o{ notifications : "receives"
-    users ||--o{ audit_logs : "triggers"
-    nutritionists ||--o{ nutritionist_patient : "manages"
-    patients ||--o{ nutritionist_patient : "assigned"
-    nutritionists ||--o{ billing_plans : "offers"
-    billing_plan_types ||--o{ billing_plans : "categorizes"
-    billing_plans ||--o{ patient_subscriptions : "subscribes"
-    patients ||--o{ patient_subscriptions : "holds"
-    patient_subscriptions ||--o{ transactions : "generates"
-    billing_plans ||--o{ transactions : "applies_to"
-    patients ||--o{ transactions : "pays"
-    nutritionists ||--o{ transactions : "receives"
-    nutritionists ||--o{ meal_types : "customizes"
-    nutritionists ||--o{ invitations : "issues"
-    billing_plans ||--o{ invitations : "attaches"
-    nutritionists ||--o{ anamneses : "conducts"
-    patients ||--o{ anamneses : "fills_or_provides"
-    anamneses ||--o{ meal_plans : "guides_baseline"
-    nutritionists ||--o{ meal_plans : "prescribes"
-    patients ||--o{ meal_plans : "receives"
-    patient_subscriptions ||--o{ meal_plans : "entitles"
-    meal_plans ||--|{ plan_days : "contains"
-    plan_days ||--|{ planned_meals : "contains"
-    meal_types ||--o{ planned_meals : "defines_type"
-    planned_meals ||--|{ meal_items : "contains"
-    food_items ||--o{ meal_items : "composed_of"
-    measurement_units ||--o{ meal_items : "quantifies"
-    planned_meals ||--o{ meal_logs : "tracks"
-    meal_types ||--o{ meal_logs : "records_type"
-    patients ||--o{ meal_logs : "submits"
-```
-
-### 7.2 Requisitos de Armazenamento
+### 7.1 Requisitos de Armazenamento
 
 | Tipo de Dado                  | Estimativa por Unidade    | Observações                                              |
 |:------------------------------|:--------------------------|:---------------------------------------------------------|
@@ -1271,19 +945,20 @@ erDiagram
 | Dashboard                     | KPIs, gráficos de adesão, alertas de planos vencendo, status financeiro      |
 | Lista de Pacientes            | Tabela com busca, filtros, status de cada paciente                           |
 | Perfil do Paciente            | Anamnese, histórico de planos, timeline de adesão, evolução, financeiro      |
+| Gestão de Anamneses           | Construtor visual de templates de anamnese com criação/edição de perguntas customizadas e seleção do template padrão do sistema |
 | Gerador de Cardápio (IA)      | Configuração de parâmetros → geração → editor visual → aprovação              |
 | Editor de Cardápio            | Interface visual de edição com busca nutricional integrada (TACO/TBCA/USDA), drag-and-drop, recálculo de macros |
 | Painel de Adesão              | Timeline diária com fotos e status de refeições                               |
 | Relatórios                    | Adesão, evolução, financeiro com filtros e exportação                         |
 | Extrato Financeiro            | Lista de transações, previsão de repasses, filtros                            |
-| Configurações                 | Perfil, preços, preferências de notificação, prioridade padrão de tabelas nutricionais (TACO/TBCA/USDA) |
+| Configurações                 | Perfil profissional, planos de atendimento, assinatura SaaS (plano ativo, faturas, ciclos promocionais restantes, cupom de desconto), notificações e prioridade padrão de tabelas (TACO/TBCA/USDA) |
 
 #### 8.1.2 App Mobile do Paciente
 
 | Tela                          | Descrição                                                                     |
 |:------------------------------|:------------------------------------------------------------------------------|
 | Login / Cadastro (via convite)| Formulário simplificado, login social, aceite de termos e consentimento       |
-| Onboarding / Anamnese         | Wizard guiado para preenchimento de restrições e objetivos                    |
+| Onboarding / Anamnese         | Wizard guiado e dinâmico para preenchimento da anamnese configurada pelo nutricionista (ou template padrão) |
 | Meu Plano                     | Visualização do plano alimentar vigente (dia a dia, refeição a refeição)      |
 | Registrar Refeição            | Câmera → foto → identificação IA → confirmação → salvar                      |
 | Histórico de Refeições        | Timeline com fotos registradas e status                                       |
@@ -1300,7 +975,8 @@ erDiagram
 | Dashboard Métricas            | KPIs da plataforma, gráficos de crescimento, churn                           |
 | Gestão de Nutricionistas      | CRUD, validação de CRN, ativação/bloqueio                                    |
 | Gestão de Pacientes           | Visualização, desativação                                                    |
-| Financeiro                    | Volume transacionado, receita do Menuvi, reconciliação                        |
+| Planos SaaS e Cupons          | Criação e gestão de planos de assinatura para nutricionistas, configuração de step pricing (descontos por ciclos) e emissão de cupons promocionais |
+| Financeiro                    | Volume transacionado, receita de SaaS e split do Menuvi, reconciliação        |
 | Logs de Auditoria             | Visualização de eventos críticos com filtros                                  |
 
 ### 8.2 Interfaces de Software (APIs e Integrações)
@@ -1405,7 +1081,7 @@ A matriz abaixo cruza os requisitos funcionais com suas dependências, regras de
 | RF-037  | Relatórios            | —                 | RNF-001                     | SHOULD     |
 | RF-038  | Backoffice            | —                 | RNF-012, RNF-014            | MUST       |
 | RF-039  | Backoffice            | —                 | RNF-002                     | MUST       |
-| RF-040  | Backoffice            | —                 | RNF-002                     | MUST       |
+| RF-040  | Backoffice            | RN-19             | RNF-002                     | MUST       |
 | RF-041  | Backoffice            | RN-02             | RNF-012                     | MUST       |
 
 ---
@@ -1420,7 +1096,7 @@ Para que o MVP do Menuvi seja considerado **pronto para lançamento em piloto fe
 |:--:|:------------------------------------------------------------------------------------------------------|:---------------------:|
 | 1  | Nutricionista consegue se cadastrar e ter o CRN validado automaticamente                              | Teste E2E             |
 | 2  | Nutricionista consegue gerar link de convite e o paciente completa o cadastro via link                 | Teste E2E             |
-| 3  | Paciente preenche anamnese com sucesso                                                                 | Teste E2E             |
+| 3  | Paciente preenche anamnese (personalizada pelo nutricionista ou template padrão) com sucesso e respostas alimentam perfil e parâmetros da IA | Teste E2E             |
 | 4  | IA gera rascunho de cardápio com valores 100% rastreáveis ao banco nutricional (TACO/TBCA/USDA) em ≤ 10 segundos | Teste funcional + perf|
 | 5  | Nutricionista edita, ajusta e aprova o cardápio com sucesso                                            | Teste E2E             |
 | 6  | Paciente visualiza o plano alimentar aprovado no app mobile                                            | Teste E2E             |
@@ -1432,7 +1108,7 @@ Para que o MVP do Menuvi seja considerado **pronto para lançamento em piloto fe
 | 12 | Backoffice permite CRUD de usuários e visualização de métricas                                          | Teste funcional       |
 | 13 | Tipos de refeição (`meal_types`) podem ser criados/customizados dinamicamente sem alteração de código  | Teste funcional       |
 | 14 | Planos financeiros customizados (avulsos, mensais, parcelados 12x) são criados e atribuídos a pacientes | Teste funcional       |
-| 15 | Nutricionista assina plano SaaS fixo de R$ 99,00/mês diretamente na plataforma via Asaas               | Teste integração      |
+| 15 | Nutricionista assina plano SaaS do Menuvi via Asaas com suporte a preço base (R$ 99,00/mês), planos promocionais por ciclo (ex: 3x R$ 49,90) e cupons | Teste integração |
 | 16 | Trava de segurança por tolerância (7 dias configuráveis) bloqueia ferramentas de pacientes e nutricionistas inadimplentes | Teste E2E |
 
 ### 11.2 Critérios Não Funcionais

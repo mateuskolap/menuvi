@@ -60,7 +60,7 @@ Para garantir agilidade de lançamento e foco absoluto sem dispersão de recurso
   - Termos de adesão e contrato de processamento de dados (DPA).
 - **Gestão de Pacientes (Apenas Convite):**
   - Geração de link de convite exclusivo para os pacientes do nutricionista.
-  - Onboarding do paciente: anamnese simplificada, restrições alimentares (glúten, lactose, frutos do mar), preferências/aversões e objetivos clínicos definidos em conjunto.
+  - Onboarding do paciente: anamnese configurável por nutricionista (com template padrão pronto do sistema), restrições alimentares (glúten, lactose, frutos do mar), preferências/aversões e objetivos clínicos definidos em conjunto.
 - **Mecanismo de Geração Assistida por IA (Human-in-the-Loop):**
   - Geração de rascunhos de cardápios semanais com gramaturas, macros e micros baseados rigidamente na Tabela TACO (UNICAMP) e IBGE.
   - Guardrails estritos: a IA nunca inventa calorias ou composições; consulta banco de dados relacional indexado.
